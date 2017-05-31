@@ -436,6 +436,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                     Log.d(TAG, "Bond state changed: BONDING");
                 } else if (bondState == BluetoothDevice.BOND_NONE) {
                     Log.d(TAG, "Bond state changed: NOT BONDED");
+
                 }
             }
         }
