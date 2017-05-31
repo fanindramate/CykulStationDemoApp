@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <declare-styleable name="CheckButton">
+        <attr name="text" format="string"/>
+        <attr name="textHeight" format="dimension"/>
+        <attr name="textColor" format="integer"/>
+        <attr name="textChecked" format="string"/>
+        <attr name="textUnChecked" format="string"/>
+        <attr name="checked" format="boolean"/>
+        <attr name="enabled" format="boolean"/>
+        <attr name="background_drawable" format="reference"/>
+        <attr name="iconWidth" format="dimension"/>
+        <attr name="iconHeight" format="dimension"/>
+        <attr name="iconCenterY" format="float"/>
+        <attr name="iconCheckedDrawable" format="reference"/>
+        <attr name="iconUncheckedDrawable" format="reference"/>
+        <attr name="labelPosition" format="enum">
+            <enum name="left" value="0"/>
+            <enum name="right" value="1"/>
+        </attr>
+    </declare-styleable>
+</resources>
