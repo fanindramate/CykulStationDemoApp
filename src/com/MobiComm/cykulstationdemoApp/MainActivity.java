@@ -36,16 +36,11 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.Color;
-import android.graphics.PorterDuff;
-import android.mtp.MtpConstants;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
-import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -54,7 +49,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.lang.String;
@@ -144,9 +138,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             return;
         }
         btnConnectLock = (Button) findViewById(R.id.btn_connect_lock);
-//        sb = (Switch)findViewById(R.id.switchButton);
-//        sb.setTextOn("<< Slide to\n Lock");
-//        sb.setTextOff("Slide to\nUnlock >>");
+
 
 
 
@@ -163,11 +155,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         // wfr Do the lock/unlock
         //
         liverLockText = (TextView)findViewById(R.id.liverText);
-//        if(txValue[0]== 1){
-//            liverLockText.setVisibility(View.GONE);
-//        }else {
-//            liverLockText.setVisibility(View.VISIBLE);
-//        }
+
         SharedPreferences sharedPreferences = getSharedPreferences("lockstate",Context.MODE_PRIVATE) ;
         lockState = sharedPreferences.getInt("lockstate",0);
 
@@ -178,7 +166,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 
                 // Perform your animation of the thumb icon if any, here I will progressively make the thumb icon transparent
-                int alpha = (int)(progress * (255/80));
+                int alpha = (int)(progress * (255/100));
                 seekBar.getThumb().setAlpha(255 - alpha);
             }
 
@@ -193,21 +181,25 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 // When user lift up the touch, we will check if it is at the end of the bar. If it is not the end, then we will set the progress status to 0 so it jumps back to the origin point
                 if (seekBar.getProgress() < 100){
                   //  seekBar.setThumb(MainActivity.this.getResources().getDrawable(R.drawable.slider2));
-                    seekBar.setProgress(0);
+                    if (mService != null && mService.isConnected()) {
+                        // if (mSeekbar.getProgress() <= 0) {
+                        if(mPasskeyType == "otp") {
+                            if(mOTPasskeyNr < mOTPKeyparts.length) {
+                                // process each mOTPKeyparts[p]
+                                bleData = Utils.hexStringToByteArray( mOTPKeyparts[mOTPasskeyNr++] );
+                            }
+                        }
+                        else bleData[0] = 1;
+                        mService.writeRXCharacteristicCommand(bleData);
+                        Log.d(TAG, "eRL Close CMD");
+                        mSeekbar.setProgress(0);
+
+                    }
+
                 } else {
                     // Put all the logic we want to proceed after unlock here
-                    if (mService != null && mService.isConnected()) {
-                        if (mSeekbar.getProgress()== 0) {
-                            if(mPasskeyType == "otp") {
-                                if(mOTPasskeyNr < mOTPKeyparts.length) {
-                                    // process each mOTPKeyparts[p]
-                                    bleData = Utils.hexStringToByteArray( mOTPKeyparts[mOTPasskeyNr++] );
-                                }
-                            }
-                            else bleData[0] = 1;
-                            mService.writeRXCharacteristicCommand(bleData);
-                            Log.d(TAG, "eRL Close CMD");
-                        } else {
+                   if (mService != null && mService.isConnected()) {
+
                             if(mPasskeyType == "otp") {
                                 if(mOTPasskeyNr < mOTPKeyparts.length) {
                                     // process each mOTPKeyparts[p]
@@ -217,81 +209,15 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                             else bleData[0] = 0;
                             mService.writeRXCharacteristicCommand(bleData);
                             Log.d(TAG, "eRL Open CMD");
-                        }
-                    }
+
+                   }
+
+
                 }
             }
         });
 
-//        sb.setOnClickListener(new View.OnClickListener() {
-//            byte[] bleData = {0};
-//            @Override
-//            public void onClick(View v) {
-//                if (mService != null && mService.isConnected()) {
-//                    if (!sb.isChecked()) {
-//                        if(mPasskeyType == "otp") {
-//                            if(mOTPasskeyNr < mOTPKeyparts.length) {
-//                                 // process each mOTPKeyparts[p]
-//                                bleData = Utils.hexStringToByteArray( mOTPKeyparts[mOTPasskeyNr++] );
-//                            }
-//                        }
-//                        else bleData[0] = 1;
-//                        mService.writeRXCharacteristicCommand(bleData);
-//                        Log.d(TAG, "eRL Close CMD");
-//                    } else {
-//                        if(mPasskeyType == "otp") {
-//                            if(mOTPasskeyNr < mOTPKeyparts.length) {
-//                                // process each mOTPKeyparts[p]
-//                                bleData = Utils.hexStringToByteArray( mOTPKeyparts[mOTPasskeyNr++] );
-//                            }
-//                        }
-//                        else bleData[0] = 0;
-//                        mService.writeRXCharacteristicCommand(bleData);
-//                        Log.d(TAG, "eRL Open CMD");
-//                    }
-//                }
-//            }
-//        });
-
-        // Set initial UI state
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        // client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
-
-
-//    public static boolean isLocationEnabled(Context context) {
-//        int locationMode = 0;
-//        String locationProviders;
-//
-//         try {
-//            locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
-//
-//        } catch (Settings.SettingNotFoundException e) {
-//            e.printStackTrace();
-//        }
-//        return locationMode != Settings.Secure.LOCATION_MODE_OFF;
-//    }
-
-//    @Override
-//    // for support android 6+
-//    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-//        switch (requestCode) {
-//            case REQUEST_CODE_ASK_PERMISSIONS:
-//                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                    Toast.makeText(this, "Loation permission allowed", Toast.LENGTH_SHORT)
-//                            .show();
-//                } else {
-//                    // Permission Denied
-//                    Toast.makeText(this, "Loation permission denied", Toast.LENGTH_SHORT)
-//                            .show();
-//                }
-//                break;
-//            default:
-//                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//        }
-//    }
 
     //ERL service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -404,6 +330,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         editor.commit();
 
                         if(txValue[0]== 0){
+                            mSeekbar.setProgress(0);
                             liverLockText.setVisibility(View.VISIBLE);
                         }else {
                             liverLockText.setVisibility(View.GONE);
@@ -436,7 +363,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                     Log.d(TAG, "Bond state changed: BONDING");
                 } else if (bondState == BluetoothDevice.BOND_NONE) {
                     Log.d(TAG, "Bond state changed: NOT BONDED");
-
                 }
             }
         }
@@ -501,26 +427,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
         return intentFilter;
     }
-//    @Override
-//    public void onStart() {
-//        super.onStart();
-//        // ATTENTION: This was auto-generated to implement the App Indexing API.
-//        // See https://g.co/AppIndexing/AndroidStudio for more information.
-//        client.connect();
-//        // ATTENTION: This was auto-generated to implement the App Indexing API.
-//        // See https://g.co/AppIndexing/AndroidStudio for more information.
-//        Action viewAction = Action.newAction(
-//                Action.TYPE_VIEW, // TODO: choose an action type.
-//                "Main Page", // TODO: Define a title for the content shown.
-//                // TODO: If you have web page content that matches this app activity's content,
-//                // make sure this auto-generated web page URL is correct.
-//                // Otherwise, set the URL to null.
-//                Uri.parse("http://host/path"),
-//                // TODO: Make sure this auto-generated app URL is correct.
-//                Uri.parse("android-app://com.MobiComm.Axa_eRL_Demo/http/host/path")
-//        );
-//        AppIndex.AppIndexApi.start(client, viewAction);
-//    }
 
     @Override
     public void onDestroy() {
@@ -547,11 +453,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         }
-
-//        if (!isLocationEnabled(this)) {
-//            Intent enableLocationIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-//            startActivityForResult(enableLocationIntent, REQUEST_ENABLE_LOCATION);
-//        }
 
         // apparently related to new permissions for android 6+
         // Using ActivityCompat means it will work with eaerlier android without crashing
