@@ -154,7 +154,7 @@ public class eRLBikeLockService extends Service {
 
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
-        final Intent intent = new Intent(action);
+        final Intent intent = new  Intent(action);
 
          // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
         if (TX_CHAR_UUID.equals(characteristic.getUuid())) {
@@ -409,7 +409,4 @@ public class eRLBikeLockService extends Service {
 
         return mBluetoothGatt.getServices();
     }
-
-
-
 }

@@ -20,9 +20,10 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.LinkedList;
 import com.MobiComm.cykulstationdemoApp.gui.CheckButton;
-import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -34,15 +35,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
@@ -95,10 +94,14 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private SeekBar mSeekbar;
     private TextView liverLockText;
     // private GoogleApiClient client;
-    byte[] txValue;
+    byte[] txValue = {0};
     private int lockState;
+    private Button button;
+    byte[] bleData = {0};
 
 
+    private static final int ENABLE_LOCK = 1;
+    private static final int DISABLE_LOCK = 2;
     private Boolean handleConnectClick(int connectBtn) {
 
         // show enable BT box if not already
@@ -139,8 +142,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         }
         btnConnectLock = (Button) findViewById(R.id.btn_connect_lock);
 
-
-
+        button = (Button) findViewById(R.id.enableBtn);
+        onClick();
 
         // PUT YOUR API TEST KEY HERE !!
 
@@ -156,11 +159,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         //
         liverLockText = (TextView)findViewById(R.id.liverText);
 
-        SharedPreferences sharedPreferences = getSharedPreferences("lockstate",Context.MODE_PRIVATE) ;
-        lockState = sharedPreferences.getInt("lockstate",0);
-
         mSeekbar = (SeekBar) findViewById(R.id.seekbar);
         mSeekbar.setClickable(false);
+
         mSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -177,10 +178,11 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                byte[] bleData = {0};
+
+
                 // When user lift up the touch, we will check if it is at the end of the bar. If it is not the end, then we will set the progress status to 0 so it jumps back to the origin point
                 if (seekBar.getProgress() < 100){
-                  //  seekBar.setThumb(MainActivity.this.getResources().getDrawable(R.drawable.slider2));
+                    //  seekBar.setThumb(MainActivity.this.getResources().getDrawable(R.drawable.slider2));
                     if (mService != null && mService.isConnected()) {
                         // if (mSeekbar.getProgress() <= 0) {
                         if(mPasskeyType == "otp") {
@@ -195,27 +197,46 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         mSeekbar.setProgress(0);
 
                     }
-
                 } else {
                     // Put all the logic we want to proceed after unlock here
-                   if (mService != null && mService.isConnected()) {
+                    if (mService != null && mService.isConnected()) {
 
-                            if(mPasskeyType == "otp") {
-                                if(mOTPasskeyNr < mOTPKeyparts.length) {
-                                    // process each mOTPKeyparts[p]
-                                    bleData = Utils.hexStringToByteArray( mOTPKeyparts[mOTPasskeyNr++] );
-                                }
+                        if(mPasskeyType == "otp") {
+                              if(mOTPasskeyNr < mOTPKeyparts.length) {
+                                // process each mOTPKeyparts[p/]
+                                bleData = Utils.hexStringToByteArray( mOTPKeyparts[mOTPasskeyNr++] );
                             }
-                            else bleData[0] = 0;
-                            mService.writeRXCharacteristicCommand(bleData);
-                            Log.d(TAG, "eRL Open CMD");
+                        }
+                        else bleData[0] = 0;
+                        mService.writeRXCharacteristicCommand(bleData);
+                        Log.d(TAG, "eRL Open CMD");
 
-                   }
+                    }
 
 
                 }
             }
         });
+
+        SharedPreferences sharedPreferences = getSharedPreferences("lockstate",Context.MODE_PRIVATE) ;
+        txValue[0] = (byte) sharedPreferences.getInt("lockstate",2);
+
+        if (txValue[0] == 0) {
+            //lock is open
+            mSeekbar.setProgress(0);
+            onClick();
+            button.setVisibility(View.VISIBLE);
+            mSeekbar.setVisibility(View.GONE);
+            liverLockText.setVisibility(View.GONE);
+
+        } else if (txValue[0] == 1) {
+            mSeekbar.setVisibility(View.VISIBLE);
+            liverLockText.setVisibility(View.GONE);
+        } else if(txValue [0] == 8) {
+             // lock is closed
+            button.setVisibility(View.GONE);
+            liverLockText.setVisibility(View.VISIBLE);
+        }
 
     }
 
@@ -239,7 +260,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
     private Handler mHandler = new Handler() {
         @Override
-
         //Handler events that received from ERL service
         public void handleMessage(Message msg) {
 
@@ -266,9 +286,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                             btnConnectLock.setText("Disconnect");
                         }
                         if(mDevice.getName().equals("AXA:77DC66F211D8639801ED")) {
-                            ((TextView) findViewById(R.id.deviceName)).setText("Cycle 53456" + " - Paired");
+                            ((TextView) findViewById(R.id.deviceName)).setText("Cycle 53456" + " - Connected");
                         }else if(mDevice.getName().equals("AXA:52C1952E2190F6897134")){
-                            ((TextView) findViewById(R.id.deviceName)).setText("Cycle 66235" + " - Paired");
+                            ((TextView) findViewById(R.id.deviceName)).setText("Cycle 66235" + " - Connected");
                         }
 
                         // ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - ready");
@@ -309,7 +329,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             if (action.equals(eRLBikeLockService.ACTION_DATA_AVAILABLE)) {
 
                 txValue = intent.getByteArrayExtra(eRLBikeLockService.EXTRA_DATA);
-                Log.d(TAG, "got " + txValue[0]); //wfr
+              //  Log.d(TAG, "got " + txValue[0]); //wfr
                 if((txValue[0]&0x01)==0x00) mSeekbar.setProgress(0);
                 else mSeekbar.setProgress(100);
                 runOnUiThread(new Runnable() {
@@ -329,11 +349,26 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         editor.putInt("lockstate",txValue[0]);
                         editor.commit();
 
-                        if(txValue[0]== 0){
+                      //  Log.d("lock_status", String.valueOf(txValue[0]));
+
+                        if (txValue[0] == 0) {
+                            //lock is open
+
                             mSeekbar.setProgress(0);
-                            liverLockText.setVisibility(View.VISIBLE);
-                        }else {
+                          //  blowAlarm();
+                            onClick();
+                            button.setVisibility(View.VISIBLE);
+                            mSeekbar.setVisibility(View.GONE);
                             liverLockText.setVisibility(View.GONE);
+                        }
+                        else if (txValue[0] == 1) {
+                            mSeekbar.setVisibility(View.VISIBLE);
+                            liverLockText.setVisibility(View.GONE);
+                        }
+                        else {
+                            // lock is closed
+                            button.setVisibility(View.GONE);
+                            liverLockText.setVisibility(View.VISIBLE);
                         }
 
                     }
@@ -367,6 +402,27 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             }
         }
     };
+
+    private void blowAlarm() {
+
+        Intent intent = new Intent(MainActivity.this,AlarmReciever.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this.getApplicationContext(), 234324243, intent, 0);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        alarmManager.set(AlarmManager.RTC_WAKEUP,System.currentTimeMillis()+(30*1000),pendingIntent);
+        Toast.makeText(this, "Alarm Blow ON in 30 seconds",
+                Toast.LENGTH_LONG).show();
+    }
+
+    private void onClick() {
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(bleData[0] == 0)
+                     bleData[0] = 1;
+                     mService.writeRXCharacteristicCommand(bleData);
+            }
+        });
+    }
 
     private final BroadcastReceiver mPairingRequestReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -444,23 +500,23 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume");
-        if (!mBtAdapter.isEnabled()) {
-            Log.i(TAG, "onResume - BT not enabled yet");
-            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-        }
-
-        // apparently related to new permissions for android 6+
-        // Using ActivityCompat means it will work with eaerlier android without crashing
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    REQUEST_CODE_ASK_PERMISSIONS);
-        }
-    }
+//    @Override
+//    public void onResume() {
+//        super.onResume();
+//        Log.d(TAG, "onResume");
+//        if (!mBtAdapter.isEnabled()) {
+//            Log.i(TAG, "onResume - BT not enabled yet");
+//            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+//        }
+//
+//        // apparently related to new permissions for android 6+
+//        // Using ActivityCompat means it will work with eaerlier android without crashing
+////        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED) {
+////            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+////                    REQUEST_CODE_ASK_PERMISSIONS);
+////        }
+//    }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
